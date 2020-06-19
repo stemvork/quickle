@@ -26,8 +26,15 @@ class Tile(Sprite):
         self.rect  = self.image.get_rect()
         self.pos = pos
         self.colshape = colshape
+        self.draw_shape()
+        self.move(pos)
 
-        _col, _shp = colshape
+    def move(self, pos):
+        self.pos = pos
+        self.rect.topleft = pos[0]*50, pos[1]*50
+    
+    def draw_shape(self):
+        _col, _shp = self.colshape
         color = COLORS[_col]
         center = (25, 25)
         cx     = 25
@@ -65,12 +72,6 @@ class Tile(Sprite):
                     cx + _r * math.sin(a * 3 * 45 * math.pi / 180)))
             pygame.draw.polygon(self.image, color, _pts)
             pygame.draw.circle(self.image, color, center, radius//2+2)
-        self.move(pos)
-
-    def move(self, pos):
-        self.pos = pos
-        self.rect.topleft = pos[0]*50, pos[1]*50
-
 
 
 class Bag:
@@ -96,24 +97,28 @@ class Bag:
     def size(self):
         return str(len(self.tiles))
 
-bag = Bag()
-
 
 class Rack(Group):
-    def __init__(self):
+    def __init__(self, bag, ypos=None):
         super().__init__()
         self.add(bag.take(6))
-        self.pos = (3, 0)
+        if ypos:
+            self.pos = (3, ypos)
+        else:
+            self.pos = (3, 0)
 
     def draw(self, _screen):
         for index, sprite in enumerate(self.sprites()):
             sprite.move((self.pos[0] + index, self.pos[1]))
             _screen.blit(sprite.image, sprite.rect)
-
-
-r = Rack()
-s = Rack()
-s.pos = (s.pos[0], 11)
+            
+    def take(self, pos):
+        kpos = pos * 50 + 5 + self.pos[0] * 50, 5 + self.pos[1] * 50
+        for sprite in self.sprites():
+            if sprite.rect.collidepoint(kpos):
+                tile = sprite
+                self.remove(sprite)
+                return tile
 
 
 class Board(Group):
@@ -121,43 +126,73 @@ class Board(Group):
         super().__init__()
 
 
-b = Board()
+class Game:
+    def __init__(self):
+        self.board = Board()
+        self.bag = Bag()
+        self.racks = []
+        self.racks.append(Rack(self.bag))
+        self.racks.append(Rack(self.bag, 11))
+        self.selected = None
+        self.player = 0
+    
+    def next(self):
+        self.player = self.player + 1 if self.player < len(self.racks)-1 else 0
+
+
+g = Game()
 
 
 def proper_exit():
     pygame.quit()
     sys.exit()
 
-
 def handle_keydown(args):
-    key, _ = args
+    key, g = args
     if key == pygame.K_ESCAPE:
         proper_exit()
     elif key == pygame.K_SPACE:
         pos = random.randint(0, 6), random.randint(0, 6)
-        tile = bag.take()
+        tile = g.bag.take()
         tile.move(pos)
-        print(tile.colshape)
-        b.add(tile)
+        g.board.add(tile)
+    elif key in range(pygame.K_1, pygame.K_1+6):
+        g.selected = g.racks[g.player].take(key - pygame.K_1)
+    elif key == pygame.K_RETURN:
+        g.next()
+    return g
 
+def handle_mousedown(args):
+    g = args
+    if g.selected is not None:
+        g.board.add(g.selected)
+        print(len(g.board.sprites()))
+        g.selected = None
+    return g
 
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             proper_exit()
         elif event.type == pygame.KEYDOWN:
-            args = event.key, None 
-            handle_keydown(args)
+            args = event.key, g
+            g = handle_keydown(args)
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            args = None
-            handle_mousedown(args)
+            args = g
+            g = handle_mousedown(args)
 
     screen.fill((80, 70, 90))
-    b.draw(screen)
-    r.draw(screen)
-    s.draw(screen)
+    g.board.draw(screen)
+    for r in g.racks:
+        r.draw(screen)
 
-    bag_size_text = font.render(bag.size(), True, (150, 150, 150))
+    if g.selected:
+        mousepos = pygame.mouse.get_pos()
+        mx, my   = mousepos[0] // 50, mousepos[1] // 50
+        g.selected.move((mx, my))
+        screen.blit(g.selected.image, g.selected.rect)
+
+    bag_size_text = font.render(g.bag.size(), True, (150, 150, 150))
     bag_size_text_rect = bag_size_text.get_rect(center=(300, 300))
     screen.blit(bag_size_text, bag_size_text_rect)
 
