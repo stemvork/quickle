@@ -72,6 +72,17 @@ class Tile(Sprite):
                     cx + _r * math.sin(a * 3 * 45 * math.pi / 180)))
             pygame.draw.polygon(self.image, color, _pts)
             pygame.draw.circle(self.image, color, center, radius//2+2)
+    def has_neighbor_in(self, board):
+        if len(board.sprites()) == 0:
+            return True
+        neighs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        for sprite in board.sprites():
+            sx, sy = self.pos
+            ox, oy = sprite.pos
+            delta = ox-sx, oy-sy
+            if delta in neighs:
+                return True
+        return False
 
 
 class Bag:
@@ -165,9 +176,10 @@ def handle_keydown(args):
 def handle_mousedown(args):
     g = args
     if g.selected is not None:
-        g.board.add(g.selected)
-        print(len(g.board.sprites()))
-        g.selected = None
+        if g.selected.has_neighbor_in(g.board):
+            g.board.add(g.selected)
+            print(len(g.board.sprites()))
+            g.selected = None
     return g
 
 while True:
