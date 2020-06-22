@@ -19,6 +19,13 @@ COLORS = [pygame.Color(c) for c in
              '#cccc00', '#00cccc', '#cc00cc']]
 
 
+def agree(t1, t2):
+    if t1.colshape[0] == t2.colshape[0]:
+        return True
+    elif t1.colshape[1] == t2.colshape[1]:
+        return True
+    return False
+
 class Tile(Sprite):
     def __init__(self, pos, colshape):
         super().__init__()
@@ -75,14 +82,25 @@ class Tile(Sprite):
     def has_neighbor_in(self, board):
         if len(board.sprites()) == 0:
             return True
+        elif len(self.get_neighs(board))>0:
+            return True
+        return False
+    def get_neighs(self, board):
         neighs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        tiles  = []
         for sprite in board.sprites():
             sx, sy = self.pos
             ox, oy = sprite.pos
             delta = ox-sx, oy-sy
             if delta in neighs:
-                return True
-        return False
+                tiles.append(sprite)
+        return tiles
+    def attach_legal(self, board):
+        neighs = self.get_neighs(board)
+        if len(neighs) == 0:
+            return True
+        for n in neighs:
+            return agree(self, n)
 
 
 class Bag:
@@ -176,7 +194,8 @@ def handle_keydown(args):
 def handle_mousedown(args):
     g = args
     if g.selected is not None:
-        if g.selected.has_neighbor_in(g.board):
+        # if g.selected.has_neighbor_in(g.board):
+        if g.selected.attach_legal(g.board):
             g.board.add(g.selected)
             print(len(g.board.sprites()))
             g.selected = None
