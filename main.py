@@ -148,6 +148,11 @@ class Rack(Group):
                 tile = sprite
                 self.remove(sprite)
                 return tile
+    def fill(self, bag):
+        if len(self.sprites())<6:
+            amount = 6-len(self.sprites())
+            tiles = bag.take(amount)
+            self.add(bag.take(amount))
 
 
 class Board(Group):
@@ -166,6 +171,7 @@ class Game:
         self.player = 0
     
     def next(self):
+        self.racks[self.player].fill(self.bag)
         self.player = self.player + 1 if self.player < len(self.racks)-1 else 0
 
 
@@ -186,7 +192,12 @@ def handle_keydown(args):
         tile.move(pos)
         g.board.add(tile)
     elif key in range(pygame.K_1, pygame.K_1+6):
-        g.selected = g.racks[g.player].take(key - pygame.K_1)
+        if g.selected is not None:
+            new = g.racks[g.player].take(key - pygame.K_1)
+            g.racks[g.player].add(g.selected)
+            g.selected = new
+        else:
+            g.selected = g.racks[g.player].take(key - pygame.K_1)
     elif key == pygame.K_RETURN:
         g.next()
     return g
