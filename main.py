@@ -4,13 +4,18 @@ import sys
 import math
 from pygame.sprite import Sprite, Group
 
+WIDTH  = 600
+HEIGHT = 600
+ROWS = 10
+COLS = 10
+SIZE = 600 // max(ROWS, COLS)
 
 pygame.init()
 font = pygame.font.SysFont("Arial", 30)
 
 
 clock = pygame.time.Clock()
-screen = pygame.display.set_mode((600, 600))
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('Quickle')
 
 
@@ -18,236 +23,135 @@ COLORS = [pygame.Color(c) for c in
             ["#ff0000", "#00ff00", '#0000ff',
              '#cccc00', '#00cccc', '#cc00cc']]
 
+def make_grid(cols, rows):
+    arr = []
+    for r in range(rows):
+        row = [None] * cols
+        arr.append(row)
+    return arr
 
-def agree(t1, t2):
-    if t1.colshape[0] == t2.colshape[0]:
-        return True
-    elif t1.colshape[1] == t2.colshape[1]:
-        return True
-    return False
-
-class Tile(Sprite):
-    def __init__(self, pos, colshape):
+class Cell(Sprite):
+    def __init__(self, i=0, j=0):
         super().__init__()
-        self.image = pygame.Surface((50, 50))
-        self.rect  = self.image.get_rect()
-        self.pos = pos
-        self.colshape = colshape
-        self.draw_shape()
-        self.move(pos)
+        self.bee = random.choice([True, False])
+        self.revealed = False
+        self.i = i;
+        self.j = j;
+        self.x = i * SIZE
+        self.y = j * SIZE
+        self.w = SIZE
+        self.h = SIZE
+        self.center = self.w//2, self.h//2
+        self.n = 0
+        self.n_text = None
 
-    def move(self, pos):
-        self.pos = pos
-        self.rect.topleft = pos[0]*50, pos[1]*50
-    
-    def draw_shape(self):
-        _col, _shp = self.colshape
-        color = COLORS[_col]
-        center = (25, 25)
-        cx     = 25
-        radius = 18
-        offset = cx - 18
-        self.image.fill((0, 0, 0))
-        if _shp == 0:
-            pygame.draw.circle(self.image, color, center, radius)
-        elif _shp == 1:
-            _offset = offset + 2
-            _radius = radius - 2
-            pygame.draw.rect(self.image, color, (_offset, _offset, 2*_radius, 2*_radius))
-        elif _shp == 2:
-            _offset = offset-2
-            _pts = [(cx, _offset), (_offset, cx), (cx, 50-_offset), (50-_offset, cx)]
-            pygame.draw.polygon(self.image, color, _pts)
-        elif _shp == 3:
-            _cx = 50 // 4 + 1
-            _r  = 8
-            _pts = [(cx, _cx), (_cx, cx), (cx, 50-_cx), (50-_cx, cx)]
-            for pt in _pts:
-                pygame.draw.circle(self.image, color, pt, _r)
-            pygame.draw.circle(self.image, color, center, _r)
-        elif _shp == 4:
-            _pts = [(offset, offset), (cx+offset//2, cx-offset//2), (50-offset, 50-offset), (cx-offset//2, cx+offset//2)]
-            pygame.draw.polygon(self.image, color, _pts)
-            _pts = [(offset, 50-offset), (cx+offset//2, cx+offset//2), (50-offset, offset), (cx-offset//2, cx-offset//2)]
-            pygame.draw.polygon(self.image, color, _pts)
-        elif _shp == 5:
-            _a = 8
-            _r = radius
-            _pts = []
-            for a in range(_a):
-                _pts.append((cx + _r * math.cos(a * 3 * 45 * math.pi / 180),
-                    cx + _r * math.sin(a * 3 * 45 * math.pi / 180)))
-            pygame.draw.polygon(self.image, color, _pts)
-            pygame.draw.circle(self.image, color, center, radius//2+2)
-    def has_neighbor_in(self, board):
-        if len(board.sprites()) == 0:
-            return True
-        elif len(self.get_neighs(board))>0:
-            return True
-        return False
-    def get_neighs(self, board):
-        neighs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-        tiles  = []
-        for sprite in board.sprites():
-            sx, sy = self.pos
-            ox, oy = sprite.pos
-            delta = ox-sx, oy-sy
-            if delta in neighs:
-                tiles.append(sprite)
-        return tiles
-    def attach_legal(self, board):
-        neighs = self.get_neighs(board)
-        if len(board.sprites())==0:
-            return True
-        elif len(neighs) > 0:
-            agrees = True
-            for n in neighs:
-                agrees = agrees and agree(self, n)
-            return agrees
+        self.image = pygame.Surface((self.w, self.h))
+        coord = self.x, self.y
+        self.rect  = self.image.get_rect(topleft = coord)
 
+        self.update()
 
-class Bag:
-    def __init__(self):
-        self.tiles = []
-        for i in range(6):
-            for j in range(6):
-                for k in range(3):
-                    tile = Tile((0, 0), (i, j))
-                    self.tiles.append(tile)
-        random.shuffle(self.tiles)
-    
-    def take(self, n=1):
-        if len(self.tiles) > 0:
-            if n > 1:
-                tiles = []
-                for i in range(n):
-                    tiles.append(self.tiles.pop())
-                return tiles
+    def update(self):
+        if self.revealed:
+            if self.bee:
+                self.draw_empty()
+                self.draw_bee()
             else:
-                return self.tiles.pop()
-
-    def size(self):
-        return str(len(self.tiles))
-
-
-class Rack(Group):
-    def __init__(self, bag, ypos=None):
-        super().__init__()
-        self.add(bag.take(6))
-        if ypos:
-            self.pos = (3, ypos)
+                self.draw_empty(clicked=True)
+                if self.n_text is not None:
+                    self.image.blit(self.n_text, self.n_text_rect)
         else:
-            self.pos = (3, 0)
-        self.overlay = pygame.Surface((50, 50))
-        self.overlay.set_alpha(100)
-        self.overlay.fill((255, 100, 50))
-        self.rect = self.overlay.get_rect(topleft=(self.pos[0]*50, self.pos[1]*50))
+            self.draw_empty()
 
-    def draw(self, _screen):
-        for index, sprite in enumerate(self.sprites()):
-            sprite.move((self.pos[0] + index, self.pos[1]))
-            _screen.blit(sprite.image, sprite.rect)
-        _screen.blit(self.overlay, self.rect)
-            
-    def take(self, pos):
-        kpos = pos * 50 + 5 + self.pos[0] * 50, 5 + self.pos[1] * 50
-        for sprite in self.sprites():
-            if sprite.rect.collidepoint(kpos):
-                tile = sprite
-                self.remove(sprite)
-                return tile
-    def fill(self, bag):
-        if len(self.sprites())<6:
-            amount = 6-len(self.sprites())
-            tiles = bag.take(amount)
-            self.add(bag.take(amount))
+    def draw_empty(self, clicked=False):
+        color = (200, 200, 200) if clicked else (255, 255, 255)
+        self.image.fill(color)
+        pygame.draw.rect(self.image, (0, 0, 0), (0, 0, self.w, self.h), 2)
 
+    def draw_bee(self):
+        pygame.draw.circle(self.image, (0, 0, 0), (self.w//2, self.h//2), 18)
 
-class Board(Group):
+    def contains(self, x, y):
+        return self.rect.collidepoint(x, y)
+
+    def reveal(self):
+        self.revealed = True
+        try:
+            print(self.n_text_rect)
+        except:
+            pass
+        self.update()
+    def count_bees(self, _GRID):
+        if self.bee:
+            return -1
+        total = 0
+        for j in [-1, 0, 1]:
+            for i in [-1, 0, 1]:
+                try:
+                    if _GRID.grid[self.j+j][self.i+i].bee:
+                        total += 1
+                except IndexError:
+                    print("Index out of bounds")
+        self.n = total
+        self.n_text = font.render(str(self.n), True, (0, 0, 0))
+        self.n_text_rect = self.n_text.get_rect(center=self.center)
+
+class Grid(Group):
     def __init__(self):
         super().__init__()
+        self.cols = COLS
+        self.rows = ROWS
+        self.grid = make_grid(self.cols, self.rows)
 
+        for r in range(len(self.grid)):
+            for c in range(len(self.grid[r])):
+                cell = Cell(c, r)
+                self.grid[r][c] = cell
+                self.add(cell)
+        for r in range(len(self.grid)):
+            for c in range(len(self.grid[r])):
+                self.grid[r][c].count_bees(self)
 
-class Game:
-    def __init__(self):
-        self.board = Board()
-        self.bag = Bag()
-        self.racks = []
-        self.racks.append(Rack(self.bag))
-        self.racks.append(Rack(self.bag, 11))
-        self.selected = None
-        self.player = 0
+GRID = Grid()
     
-    def next(self):
-        if self.selected is not None:
-            self.racks[self.player].add(self.selected)
-            self.selected = None
-        self.racks[self.player].fill(self.bag)
-        self.player = self.player + 1 if self.player < len(self.racks)-1 else 0
-
-
-g = Game()
-
-
 def proper_exit():
     pygame.quit()
     sys.exit()
 
 def handle_keydown(args):
-    key, g = args
+    key, GRID = args
     if key == pygame.K_ESCAPE:
         proper_exit()
     elif key == pygame.K_SPACE:
-        pos = random.randint(0, 6), random.randint(0, 6)
-        tile = g.bag.take()
-        tile.move(pos)
-        g.board.add(tile)
-    elif key in range(pygame.K_1, pygame.K_1+6):
-        if g.selected is not None:
-            new = g.racks[g.player].take(key - pygame.K_1)
-            g.racks[g.player].add(g.selected)
-            g.selected = new
-        else:
-            g.selected = g.racks[g.player].take(key - pygame.K_1)
+        pass
     elif key == pygame.K_RETURN:
-        g.next()
-    return g
+        pass
+    elif key == pygame.K_r:
+        GRID = Grid()
+    return GRID
 
 def handle_mousedown(args):
-    g = args
-    if g.selected is not None:
-        # if g.selected.has_neighbor_in(g.board):
-        if g.selected.attach_legal(g.board):
-            g.board.add(g.selected)
-            print(len(g.board.sprites()))
-            g.selected = None
-    return g
+    x, y = pygame.mouse.get_pos()
+    for cell in GRID.sprites():
+        if cell.contains(x, y):
+            cell.reveal()
+    return GRID
+
 
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             proper_exit()
         elif event.type == pygame.KEYDOWN:
-            args = event.key, g
-            g = handle_keydown(args)
+            args = event.key, GRID
+            GRID = handle_keydown(args)
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            args = g
-            g = handle_mousedown(args)
+            args = GRID
+            GRID = handle_mousedown(args)
 
     screen.fill((80, 70, 90))
-    g.board.draw(screen)
-    for r in g.racks:
-        r.draw(screen)
-
-    if g.selected:
-        mousepos = pygame.mouse.get_pos()
-        mx, my   = mousepos[0] // 50, mousepos[1] // 50
-        g.selected.move((mx, my))
-        screen.blit(g.selected.image, g.selected.rect)
-
-    bag_size_text = font.render(g.bag.size(), True, (150, 150, 150))
-    bag_size_text_rect = bag_size_text.get_rect(center=(300, 300))
-    screen.blit(bag_size_text, bag_size_text_rect)
+    GRID.draw(screen)
+    
 
     pygame.display.flip()
     clock.tick(60)
