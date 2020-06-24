@@ -11,3 +11,4 @@ Pygame implementation of the Minesweeper classic.
     - Remaining red dots are incorrectly marked.
 - After winning or losing the game, press 'r' to restart.
 
+![Screenshot of Marksweeper](https://github.com/stemvork/quickle/blob/master/minesweeper/screenshot.png)
