@@ -1,6 +1,6 @@
 # Quickle
 
-tickle trickle
+```tickle trickle
 what's a quickle
 programming qwirkle
 the board game galore
