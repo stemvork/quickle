@@ -1,5 +1,7 @@
 # Quickle
 
+- [Marksweeper](https://github.com/stemvork/quickle/tree/master/minesweeper)
+
 ```tickle trickle
 what's a quickle
 programming qwirkle
