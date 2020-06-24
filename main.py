@@ -9,6 +9,9 @@ HEIGHT = 600
 ROWS = 10
 COLS = 10
 SIZE = 600 // max(ROWS, COLS)
+TOTALBEES = 10
+
+DEBUG = True
 
 pygame.init()
 font = pygame.font.SysFont("Arial", 30)
@@ -30,11 +33,13 @@ def make_grid(cols, rows):
         arr.append(row)
     return arr
 
+
 class Cell(Sprite):
     def __init__(self, i=0, j=0):
         super().__init__()
-        self.bee = random.choice([True, False])
-        self.revealed = False
+        #self.bee = random.choice([True, False])
+        self.bee = False
+        self.revealed = DEBUG
         self.i = i;
         self.j = j;
         self.x = i * SIZE
@@ -76,10 +81,6 @@ class Cell(Sprite):
 
     def reveal(self):
         self.revealed = True
-        try:
-            print(self.n_text_rect)
-        except:
-            pass
         self.update()
     def count_bees(self, _GRID):
         if self.bee:
@@ -87,14 +88,18 @@ class Cell(Sprite):
         total = 0
         for j in [-1, 0, 1]:
             for i in [-1, 0, 1]:
-                try:
-                    if _GRID.grid[self.j+j][self.i+i].bee:
-                        total += 1
-                except IndexError:
-                    print("Index out of bounds")
+                _r = self.j + j
+                _c = self.i + i
+                if _r > -1 and _r < ROWS and _c > -1 and _c < COLS:
+                    try:
+                        if _GRID.grid[self.j+j][self.i+i].bee:
+                            total += 1
+                    except IndexError:
+                        print("Index out of bounds")
         self.n = total
         self.n_text = font.render(str(self.n), True, (0, 0, 0))
         self.n_text_rect = self.n_text.get_rect(center=self.center)
+        self.update()
 
 class Grid(Group):
     def __init__(self):
@@ -108,9 +113,23 @@ class Grid(Group):
                 cell = Cell(c, r)
                 self.grid[r][c] = cell
                 self.add(cell)
+        self.create_bees()
         for r in range(len(self.grid)):
             for c in range(len(self.grid[r])):
                 self.grid[r][c].count_bees(self)
+
+    def create_bees(self):
+        options = []
+        for j in range(ROWS):
+            for i in range(COLS):
+                options.append([i, j])
+
+        for n in range(TOTALBEES):
+            index = random.randint(0, len(options)-1)
+            _i, _j = options.pop(index)
+            self.grid[_j][_i].bee = True
+            self.grid[_j][_i].update()
+
 
 GRID = Grid()
     
