@@ -97,10 +97,13 @@ class Tile(Sprite):
         return tiles
     def attach_legal(self, board):
         neighs = self.get_neighs(board)
-        if len(neighs) == 0:
+        if len(board.sprites())==0:
             return True
-        for n in neighs:
-            return agree(self, n)
+        elif len(neighs) > 0:
+            agrees = True
+            for n in neighs:
+                agrees = agrees and agree(self, n)
+            return agrees
 
 
 class Bag:
@@ -135,11 +138,16 @@ class Rack(Group):
             self.pos = (3, ypos)
         else:
             self.pos = (3, 0)
+        self.overlay = pygame.Surface((50, 50))
+        self.overlay.set_alpha(100)
+        self.overlay.fill((255, 100, 50))
+        self.rect = self.overlay.get_rect(topleft=(self.pos[0]*50, self.pos[1]*50))
 
     def draw(self, _screen):
         for index, sprite in enumerate(self.sprites()):
             sprite.move((self.pos[0] + index, self.pos[1]))
             _screen.blit(sprite.image, sprite.rect)
+        _screen.blit(self.overlay, self.rect)
             
     def take(self, pos):
         kpos = pos * 50 + 5 + self.pos[0] * 50, 5 + self.pos[1] * 50
@@ -171,6 +179,9 @@ class Game:
         self.player = 0
     
     def next(self):
+        if self.selected is not None:
+            self.racks[self.player].add(self.selected)
+            self.selected = None
         self.racks[self.player].fill(self.bag)
         self.player = self.player + 1 if self.player < len(self.racks)-1 else 0
 
