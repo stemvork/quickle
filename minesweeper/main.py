@@ -9,7 +9,7 @@ HEIGHT = 600
 ROWS = 10
 COLS = 10
 SIZE = 600 // max(ROWS, COLS)
-TOTALBEES = 20
+TOTALBEES = 11
 
 DEBUG = False
 
@@ -19,7 +19,7 @@ font = pygame.font.SysFont("Arial", 30)
 
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption('Quickle')
+pygame.display.set_caption('Marksweeper')
 
 
 COLORS = [pygame.Color(c) for c in 
@@ -40,6 +40,7 @@ class Cell(Sprite):
         #self.bee = random.choice([True, False])
         self.bee = False
         self.revealed = DEBUG
+        self.marked = False
         self.i = i;
         self.j = j;
         self.x = i * SIZE
@@ -59,13 +60,24 @@ class Cell(Sprite):
 
     def update(self):
         if self.revealed:
-            if self.bee:
+            if self.marked:
+                self.draw_empty(clicked=True)
+                if self.bee:
+                    self.draw_mark(bee=True)
+                else:
+                    self.draw_mark()
+            elif self.bee:
                 self.draw_empty()
                 self.draw_bee()
             else:
                 self.draw_empty(clicked=True)
                 if self.n_text is not None:
                     self.image.blit(self.n_text, self.n_text_rect)
+
+        elif self.marked:
+            self.draw_empty(clicked=True)
+            self.draw_mark()
+
         else:
             self.draw_empty()
 
@@ -77,8 +89,20 @@ class Cell(Sprite):
     def draw_bee(self):
         pygame.draw.circle(self.image, (0, 0, 0), (self.w//2, self.h//2), 18)
 
+    def draw_mark(self, bee=False):
+        color = (0, 255, 0) if bee else (255, 0, 0)
+        pygame.draw.circle(self.image, color, (self.w//2, self.h//2), 18)
+
     def contains(self, x, y):
         return self.rect.collidepoint(x, y)
+
+    def mark(self):
+        self.marked = True
+        self.update()
+
+    def unmark(self):
+        self.marked = False
+        self.update()
 
     def reveal(self):
         self.revealed = True
@@ -95,8 +119,6 @@ class Cell(Sprite):
                     neighbor = self.grid.grid[_r][_c]
                     if not neighbor.revealed and not neighbor.bee:
                         neighbor.reveal()
-
-        
 
     def count_bees(self):
         if self.bee:
@@ -125,6 +147,8 @@ class Grid(Group):
         self.cols = COLS
         self.rows = ROWS
         self.grid = make_grid(self.cols, self.rows)
+        self.revealed = 0
+        self.ended = False
 
         for r in range(len(self.grid)):
             for c in range(len(self.grid[r])):
@@ -147,7 +171,21 @@ class Grid(Group):
             _i, _j = options.pop(index)
             self.grid[_j][_i].bee = True
             self.grid[_j][_i].update()
-
+    
+    def count_neutral(self):
+        total = 0
+        for j in range(len(self.grid)):
+            for i in range(len(self.grid[j])):
+                if self.grid[j][i].revealed or self.grid[j][i].marked:
+                    total +=  1
+        self.revealed = total
+        return ROWS * COLS - total
+    
+    def game_over(self):
+        for j in range(len(self.grid)):
+            for i in range(len(self.grid[j])):
+                self.grid[j][i].reveal()
+        self.ended = True
 
 GRID = Grid()
     
@@ -164,14 +202,31 @@ def handle_keydown(args):
     elif key == pygame.K_RETURN:
         pass
     elif key == pygame.K_r:
-        GRID = Grid()
+        if GRID.ended:
+            GRID = Grid()
     return GRID
 
 def handle_mousedown(args):
-    x, y = pygame.mouse.get_pos()
-    for cell in GRID.sprites():
-        if cell.contains(x, y):
-            cell.reveal()
+    args = GRID
+    if not GRID.ended:
+        x, y = pygame.mouse.get_pos()
+        if pygame.mouse.get_pressed()[0]:
+            for cell in GRID.sprites():
+                if cell.contains(x, y):
+                    if cell.marked:
+                        return
+                    cell.reveal()
+                    if cell.bee:
+                        GRID.game_over()
+        elif pygame.mouse.get_pressed()[2]:
+            for cell in GRID.sprites():
+                if cell.contains(x, y):
+                    if not cell.marked:
+                        cell.mark()
+                    else:
+                        cell.unmark()
+        if GRID.count_neutral() == 0:
+            GRID.game_over()
     return GRID
 
 
