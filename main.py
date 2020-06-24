@@ -9,9 +9,9 @@ HEIGHT = 600
 ROWS = 10
 COLS = 10
 SIZE = 600 // max(ROWS, COLS)
-TOTALBEES = 10
+TOTALBEES = 20
 
-DEBUG = True
+DEBUG = False
 
 pygame.init()
 font = pygame.font.SysFont("Arial", 30)
@@ -35,7 +35,7 @@ def make_grid(cols, rows):
 
 
 class Cell(Sprite):
-    def __init__(self, i=0, j=0):
+    def __init__(self, i, j, _GRID):
         super().__init__()
         #self.bee = random.choice([True, False])
         self.bee = False
@@ -49,6 +49,7 @@ class Cell(Sprite):
         self.center = self.w//2, self.h//2
         self.n = 0
         self.n_text = None
+        self.grid = _GRID
 
         self.image = pygame.Surface((self.w, self.h))
         coord = self.x, self.y
@@ -81,10 +82,26 @@ class Cell(Sprite):
 
     def reveal(self):
         self.revealed = True
+        if self.n == 0:
+            self.floodfill()
         self.update()
-    def count_bees(self, _GRID):
+
+    def floodfill(self):
+        for j in [-1, 0, 1]:
+            for i in [-1, 0, 1]:
+                _r = self.j + j
+                _c = self.i + i
+                if _r > -1 and _r < ROWS and _c > -1 and _c < COLS:
+                    neighbor = self.grid.grid[_r][_c]
+                    if not neighbor.revealed and not neighbor.bee:
+                        neighbor.reveal()
+
+        
+
+    def count_bees(self):
         if self.bee:
-            return -1
+            self.n = -1
+            return
         total = 0
         for j in [-1, 0, 1]:
             for i in [-1, 0, 1]:
@@ -92,14 +109,15 @@ class Cell(Sprite):
                 _c = self.i + i
                 if _r > -1 and _r < ROWS and _c > -1 and _c < COLS:
                     try:
-                        if _GRID.grid[self.j+j][self.i+i].bee:
+                        if self.grid.grid[_r][_c].bee:
                             total += 1
                     except IndexError:
                         print("Index out of bounds")
         self.n = total
-        self.n_text = font.render(str(self.n), True, (0, 0, 0))
-        self.n_text_rect = self.n_text.get_rect(center=self.center)
-        self.update()
+        if self.n > 0:
+            self.n_text = font.render(str(self.n), True, (0, 0, 0))
+            self.n_text_rect = self.n_text.get_rect(center=self.center)
+            self.update()
 
 class Grid(Group):
     def __init__(self):
@@ -110,13 +128,13 @@ class Grid(Group):
 
         for r in range(len(self.grid)):
             for c in range(len(self.grid[r])):
-                cell = Cell(c, r)
+                cell = Cell(c, r, self)
                 self.grid[r][c] = cell
                 self.add(cell)
         self.create_bees()
         for r in range(len(self.grid)):
             for c in range(len(self.grid[r])):
-                self.grid[r][c].count_bees(self)
+                self.grid[r][c].count_bees()
 
     def create_bees(self):
         options = []
