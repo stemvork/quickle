@@ -1,15 +1,6 @@
-# Quickle
+# Beer is los
 
-- [Marksweeper](https://github.com/stemvork/quickle/tree/master/minesweeper)
+Pygame implementation of the animal board game.
+Reference: https://www.yourturnmyturn.com/rules/tallyho.ph
 
-```tickle trickle
-what's a quickle
-programming qwirkle
-the board game galore
-in fewer and fewer
-'til minutes no more
-but also creation
-dilation causation
-to some small gradation
-enough with the poem
-onto the pygame.
+<!-- ![Screenshot of Marksweeper](https://github.com/stemvork/quickle/blob/master/minesweeper/screenshot.png) -->
