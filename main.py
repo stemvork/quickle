@@ -37,9 +37,9 @@ def make_grid(cols, rows):
 class Tile(Sprite):
     def __init__(self, i, j, _GRID):
         super().__init__()
-        #self.bee = random.choice([True, False])
-        self.i = i;
-        self.j = j;
+        self.i = i
+        self.j = j
+        self.revealed = False
         self.x = i * SIZE
         self.y = j * SIZE
         self.w = SIZE
@@ -59,6 +59,7 @@ class Tile(Sprite):
 
     def update(self):
         coord = self.x, self.y
+        self.color = (255, 255, 255) if self.revealed else (180, 180, 180)
         self.rect  = self.image.get_rect(topleft = coord)
         self.draw_empty()
 
@@ -69,6 +70,19 @@ class Tile(Sprite):
     def contains(self, x, y):
         return self.rect.collidepoint(x, y)
 
+class BGTile(Tile):
+    def __init__(self, i, j, _GRID, color):
+        super().__init__(i, j, _GRID)
+        self.color = color
+        self.update()
+
+    def move(self, pos):
+        pass
+    
+    def update(self):
+        coord = self.x, self.y
+        self.rect  = self.image.get_rect(topleft = coord)
+        self.draw_empty()
 
 class Grid(Group):
     def __init__(self):
@@ -84,9 +98,16 @@ class Grid(Group):
                 tile = Tile(c, r, self)
                 self.grid[r][c] = tile
                 self.add(tile)
-        center_tile = self.grid[ROWS//2][COLS//2]
-        center_tile.color = (255, 0, 0)
-        center_tile.update()
+        center_old = self.grid[ROWS//2][COLS//2]
+        self.remove(center_old)
+        center_tile = BGTile(ROWS//2, COLS//2, self, (255, 0, 0))
+        self.add(center_tile)
+        self.grid[ROWS//2][COLS//2] = center_tile
+
+    def at(self, x, y):
+        for cell in self.sprites():
+            if cell.contains(x, y):
+                return cell
 
     def count_neutral(self):
         total = 0
@@ -127,9 +148,11 @@ def handle_mousedown(args):
         x, y = pygame.mouse.get_pos()
 
         if pygame.mouse.get_pressed()[0]:
+            print(GRID.at(ROWS//2, COLS//2).color)
             for cell in GRID.sprites():
                 if cell.contains(x, y):
-                    pass
+                    cell.revealed = True
+                    cell.update()
 
         elif pygame.mouse.get_pressed()[2]:
             pass
