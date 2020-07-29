@@ -19,6 +19,15 @@ CARDCOUNTS = {
     "pheasants": 8,
     "trees": 15
 }
+MOVABLE = {
+    "bears": 1,
+    "foxes": 1,
+    "foresters": 2,
+    "hunters": 2,
+    "ducks": 0,
+    "pheasants": 0,
+    "trees": 0
+}
 COLORMAP = {
     "bears": 2,
     "foxes": 2,
@@ -30,17 +39,16 @@ COLORMAP = {
     "empty": 6
 }
 print("There are", len(CARDCOUNTS.keys()), "categories. They make up",
-      sum(CARDCOUNTS.values()), "cards.")
-# TODO: convert list of card counts with name to list of tuples with position.
+      sum(CARDCOUNTS.values()), "cards",'\n') if DEBUG else None
 CARDS = [item[0] for item in CARDCOUNTS.items() for i in range(item[1])]
 random.shuffle(CARDS)
-print(CARDS)
+print(CARDS,'\n') if DEBUG else None
 POSITIONS = [(i, j) for i in range(7) for j in range(7) if (i, j) != (3, 3)]
 # random.shuffle(POSITIONS)
-print(POSITIONS)
+print(POSITIONS,'\n') if DEBUG else None
 CARDS = [(b, a, 0) for a, b in zip(CARDS, POSITIONS)]
-CARDS.insert(24, ((3, 3), "empty", 0))
-print(CARDS)
+CARDS.insert(24, ((3, 3), "empty", 1))
+print(CARDS,'\n') if DEBUG else None
 
 # Initialise pygame
 pygame.init()
@@ -59,12 +67,19 @@ COLORS = [pygame.Color(c) for c in
 def proper_exit():
     pygame.quit()
     sys.exit()
-def revealCard(CARDS, idx):
-    card = CARDS[idx]
-    card = (card[0], card[1], 1)
-    CARDS[idx] = card
-    return CARDS
 
+def revealCard(idx):
+    card = CARDS[idx]
+    if card[2] == 0:
+        CARDS[idx] = (card[0], card[1], 1)
+        return True
+    else:
+        return False
+
+def getMovable(idx):
+    return MOVABLE[CARDS[idx][1]]
+
+PLAYER = 0
 # Game loop
 while True:
     # Event loop
@@ -77,11 +92,18 @@ while True:
             mx, my = pygame.mouse.get_pos()
             mi, mj = mx // SIZE, my // SIZE
             idx = mi*7+mj
-            revealCard(CARDS, idx)
-
+            revealed = revealCard(idx)
+            if not revealed and getMovable(idx) > 0 and getMovable(idx)+1 == PLAYER:
+                print("Get movin'!")
+                PLAYER = not PLAYER
+            elif revealed:
+                print("Player", PLAYER, "found", CARDS[idx], '\n') if DEBUG else None
+                PLAYER = not PLAYER
+            else:
+                pass
 
     # Draw loop
-    screen.fill((80, 70, 90))
+    screen.fill(COLORS[-1])
     for card in CARDS:
         cardColor = COLORS[COLORMAP[card[1]]]
         if card[2] > 0:
