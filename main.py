@@ -3,37 +3,43 @@ import random
 import sys
 import math
 from pygame.sprite import Sprite, Group
-
+# Some constants
 WIDTH  = 595
 HEIGHT = WIDTH
 ROWS = 7
 COLS = 7
 SIZE = WIDTH // max(ROWS, COLS)
-
 DEBUG = False
+CARDS = {
+    "bears": 2,
+    "foxes": 6,
+    "foresters": 2,
+    "hunters": 8,
+    "ducks": 7,
+    "pheasants": 8,
+    "trees": 15
+}
+print("There are", len(CARDS.keys()), "categories. They make up",
+      sum(CARDS.values()), "cards.")
 
+# Initialise pygame
 pygame.init()
 font = pygame.font.SysFont("Arial", 30)
-
-
+# Basic components
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption('Marksweeper')
-
-
-COLORS = [pygame.Color(c) for c in 
+pygame.display.set_caption('Beer is Los')
+COLORS = [pygame.Color(c) for c in
             ["#ff0000", "#00ff00", '#0000ff',
              '#cccc00', '#00cccc', '#cc00cc']]
-
-
+# Grid array generation
 def make_grid(cols, rows):
     arr = []
     for r in range(rows):
         row = [None] * cols
         arr.append(row)
     return arr
-
-
+# Define a tile component
 class Tile(Sprite):
     def __init__(self, i, j, _GRID):
         super().__init__()
@@ -69,7 +75,7 @@ class Tile(Sprite):
 
     def contains(self, x, y):
         return self.rect.collidepoint(x, y)
-
+# Define a background tile component
 class BGTile(Tile):
     def __init__(self, i, j, _GRID, color):
         super().__init__(i, j, _GRID)
@@ -78,12 +84,12 @@ class BGTile(Tile):
 
     def move(self, pos):
         pass
-    
+
     def update(self):
         coord = self.x, self.y
         self.rect  = self.image.get_rect(topleft = coord)
         self.draw_empty()
-
+# Define a grid spritegroup component, actually game class
 class Grid(Group):
     def __init__(self):
         super().__init__()
@@ -116,15 +122,15 @@ class Grid(Group):
                 pass
         self.revealed = total
         return ROWS * COLS - total
-    
+
     def game_over(self):
         for j in range(len(self.grid)):
             for i in range(len(self.grid[j])):
                 self.grid[j][i].reveal()
         self.ended = True
-
+# Instantiate a grid
 GRID = Grid()
-    
+# Some handler functions
 def proper_exit():
     pygame.quit()
     sys.exit()
@@ -161,9 +167,9 @@ def handle_mousedown(args):
             GRID.game_over()
 
     return GRID
-
-
+# Game loop
 while True:
+    # Event loop
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             proper_exit()
@@ -173,9 +179,9 @@ while True:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             args = GRID
             GRID = handle_mousedown(args)
-
+    # Draw loop
     screen.fill((80, 70, 90))
     GRID.draw(screen)
-    
+    # Finish the draw loop
     pygame.display.flip()
     clock.tick(60)
